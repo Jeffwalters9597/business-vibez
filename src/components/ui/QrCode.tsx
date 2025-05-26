@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download } from 'lucide-react';
 import Button from './Button';
@@ -22,22 +22,32 @@ const QrCode: React.FC<QrCodeProps> = ({
   onDownload,
   hideDownload = false
 }) => {
+  const qrContainerRef = useRef<HTMLDivElement>(null);
+
   const handleDownload = () => {
     try {
-      // Create a temporary container for the SVG
-      const container = document.createElement('div');
-      container.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-        <rect width="100%" height="100%" fill="white"/>
-        ${new XMLSerializer().serializeToString(document.querySelector('svg') as SVGElement)}
-      </svg>`;
-      
-      // Get the SVG string
-      const svgString = container.innerHTML;
-      
+      const qrContainer = qrContainerRef.current;
+      if (!qrContainer) return;
+
+      // Get the QR code SVG element
+      const qrSvg = qrContainer.querySelector('svg');
+      if (!qrSvg) {
+        console.error('QR code SVG not found');
+        return;
+      }
+
+      // Create a new SVG with white background
+      const svgString = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
+          <rect width="100%" height="100%" fill="white"/>
+          ${qrSvg.innerHTML}
+        </svg>
+      `;
+
       // Create a Blob from the SVG string
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
       const url = URL.createObjectURL(blob);
-      
+
       // Create download link
       const link = document.createElement('a');
       link.href = url;
@@ -45,10 +55,10 @@ const QrCode: React.FC<QrCodeProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       // Cleanup
       URL.revokeObjectURL(url);
-      
+
       if (onDownload) {
         onDownload();
       }
@@ -59,7 +69,7 @@ const QrCode: React.FC<QrCodeProps> = ({
 
   return (
     <div className={className}>
-      <div className="bg-white p-4 rounded-lg inline-block">
+      <div ref={qrContainerRef} className="bg-white p-4 rounded-lg inline-block">
         <QRCodeSVG
           value={value}
           size={size}
