@@ -22,11 +22,11 @@ const QrCode: React.FC<QrCodeProps> = ({
   onDownload,
   hideDownload = false
 }) => {
-  const qrContainerRef = useRef<HTMLDivElement>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = () => {
     try {
-      const qrContainer = qrContainerRef.current;
+      const qrContainer = qrRef.current;
       if (!qrContainer) return;
 
       // Get the QR code SVG element
@@ -36,13 +36,8 @@ const QrCode: React.FC<QrCodeProps> = ({
         return;
       }
 
-      // Create a new SVG with white background
-      const svgString = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}">
-          <rect width="100%" height="100%" fill="white"/>
-          ${qrSvg.innerHTML}
-        </svg>
-      `;
+      // Create a new SVG with transparent background
+      const svgString = new XMLSerializer().serializeToString(qrSvg);
 
       // Create a Blob from the SVG string
       const blob = new Blob([svgString], { type: 'image/svg+xml' });
@@ -69,12 +64,24 @@ const QrCode: React.FC<QrCodeProps> = ({
 
   return (
     <div className={className}>
-      <div ref={qrContainerRef} className="bg-white p-4 rounded-lg inline-block">
+      <div 
+        ref={qrRef} 
+        className="inline-block"
+        style={{
+          lineHeight: 0, // Remove any extra space
+          fontSize: 0 // Remove any extra space
+        }}
+      >
         <QRCodeSVG
           value={value}
           size={size}
           level={level}
           includeMargin={includeMargin}
+          style={{
+            width: '100%',
+            height: '100%',
+            display: 'block'
+          }}
         />
       </div>
       {!hideDownload && (
