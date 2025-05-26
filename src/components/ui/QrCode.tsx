@@ -25,39 +25,56 @@ const QrCode: React.FC<QrCodeProps> = ({
   const qrRef = useRef<SVGSVGElement>(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Reset ready state when value changes
   useEffect(() => {
-    setIsReady(false);
-  }, [value]);
+    // Check if QR code is ready when ref or value changes
+    if (qrRef.current && value) {
+      setIsReady(true);
+    } else {
+      setIsReady(false);
+    }
+  }, [qrRef, value]);
 
   const handleDownload = () => {
-    if (!isReady || !qrRef.current) {
-      console.error('QR code ref is not available or not ready');
+    // Early return if SVG is not ready
+    if (!qrRef.current || !isReady) {
+      console.warn('QR code is not ready yet');
       return;
     }
 
     try {
+      // Get the SVG element
       const svgElement = qrRef.current;
-      const clonedSvgElement = svgElement.cloneNode(true) as SVGElement;
-      clonedSvgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-
-      const svgString = new XMLSerializer().serializeToString(clonedSvgElement);
-      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-
+      
+      // Create a deep clone of the SVG
+      const clonedSvg = svgElement.cloneNode(true) as SVGElement;
+      
+      // Add required SVG attributes
+      clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      
+      // Convert SVG to string
+      const svgData = new XMLSerializer().serializeToString(clonedSvg);
+      
+      // Create blob and object URL
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      // Create and trigger download
       const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `qr-code-${new Date().toISOString().slice(0, 10)}.svg`;
-
+      link.href = url;
+      link.download = `qr-code-${Date.now()}.svg`;
       document.body.appendChild(link);
       link.click();
+      
+      // Cleanup
       document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-
+      URL.revokeObjectURL(url);
+      
+      // Call onDownload callback if provided
       if (onDownload) {
         onDownload();
       }
     } catch (error) {
-      console.error('Error downloading QR code:', error);
+      console.error('Failed to download QR code:', error);
     }
   };
 
@@ -70,7 +87,6 @@ const QrCode: React.FC<QrCodeProps> = ({
           size={size}
           level={level}
           includeMargin={includeMargin}
-          onLoad={() => setIsReady(true)}
         />
       </div>
       {!hideDownload && (
@@ -79,6 +95,7 @@ const QrCode: React.FC<QrCodeProps> = ({
           variant="outline"
           className="w-full mt-4"
           leftIcon={<Download size={16} />}
+          disabled={!isReady}
         >
           Download QR Code
         </Button>
