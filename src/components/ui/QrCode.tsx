@@ -23,66 +23,64 @@ const QrCode: React.FC<QrCodeProps> = ({
   hideDownload = false
 }) => {
   const qrRef = useRef<SVGSVGElement>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  useEffect(() => {
-    // Check if QR code is ready when ref or value changes
-    if (qrRef.current && value) {
-      setIsReady(true);
-    }
-  }, [qrRef.current, value]);
-
-  const handleDownload = () => {
-    if (!qrRef.current || !isReady) return;
-
+  const handleDownload = async () => {
+    if (!qrRef.current) return;
+    
+    setIsDownloading(true);
+    
     try {
       // Get the SVG element
       const svgElement = qrRef.current;
       
-      // Create a canvas element
+      // Create a canvas with a white background
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Could not get canvas context');
-      
-      // Set canvas size to match SVG
       canvas.width = size;
       canvas.height = size;
       
-      // Create a temporary image
-      const img = new Image();
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+      
+      // Fill white background
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // Convert SVG to data URL
       const svgData = new XMLSerializer().serializeToString(svgElement);
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
+      const DOMURL = window.URL || window.webkitURL || window;
+      const url = DOMURL.createObjectURL(svgBlob);
       
-      // When image loads, draw to canvas and create download
-      img.onload = () => {
-        // Draw white background
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw QR code
-        ctx.drawImage(img, 0, 0);
-        
-        // Convert to PNG and download
-        const pngUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `qr-code-${Date.now()}.png`;
-        link.href = pngUrl;
-        link.click();
-        
-        // Cleanup
-        URL.revokeObjectURL(url);
-      };
-      
+      // Create image and draw to canvas when loaded
+      const img = new Image();
       img.src = url;
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+      
+      // Draw QR code on top of white background
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert to PNG and download
+      const pngUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `qr-code-${Date.now()}.png`;
+      link.href = pngUrl;
+      link.click();
+      
+      // Cleanup
+      DOMURL.revokeObjectURL(url);
       
       if (onDownload) {
         onDownload();
       }
     } catch (error) {
       console.error('Failed to download QR code:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -103,7 +101,7 @@ const QrCode: React.FC<QrCodeProps> = ({
           variant="outline"
           className="w-full mt-4"
           leftIcon={<Download size={16} />}
-          disabled={!isReady}
+          isLoading={isDownloading}
         >
           Download QR Code
         </Button>
