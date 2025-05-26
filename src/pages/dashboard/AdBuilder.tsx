@@ -5,6 +5,7 @@ import Card, { CardHeader, CardTitle, CardContent, CardFooter } from '../../comp
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import QrCode from '../../components/ui/QrCode';
+import { toPng } from 'html-to-image';
 import { 
   Download, 
   Plus, 
@@ -47,6 +48,7 @@ const AdBuilder = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savedDesigns, setSavedDesigns] = useState<AdDesign[]>([]);
+  const previewRef = useRef<HTMLDivElement>(null);
   const [adForm, setAdForm] = useState({
     name: '',
     headline: '',
@@ -213,9 +215,28 @@ const AdBuilder = () => {
     }
   };
 
-  const handleDownload = () => {
-    // In a real app, this would generate and download the ad image
-    toast('Download functionality coming soon');
+  const handleDownload = async () => {
+    if (!previewRef.current) {
+      toast.error('Preview not available');
+      return;
+    }
+
+    try {
+      const dataUrl = await toPng(previewRef.current, {
+        quality: 1.0,
+        pixelRatio: 2
+      });
+      
+      const link = document.createElement('a');
+      link.download = `ad-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      toast.success('Ad design downloaded');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download design');
+    }
   };
 
   const renderAdList = () => (
@@ -332,6 +353,7 @@ const AdBuilder = () => {
             </CardHeader>
             <CardContent>
               <div 
+                ref={previewRef}
                 className="aspect-video rounded-lg p-8 relative overflow-hidden"
                 style={{ backgroundColor: selectedDesign.background }}
               >
@@ -524,6 +546,7 @@ const AdBuilder = () => {
           </CardHeader>
           <CardContent>
             <div 
+              ref={previewRef}
               className="aspect-video rounded-lg p-8 relative"
               style={{ backgroundColor: adForm.background }}
             >
