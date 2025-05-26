@@ -25,16 +25,14 @@ const QrCode: React.FC<QrCodeProps> = ({
   const qrRef = useRef<SVGSVGElement>(null);
   const [isReady, setIsReady] = useState(false);
 
+  // Reset ready state when value changes
   useEffect(() => {
-    // Set ready state when QR code is rendered
-    if (qrRef.current) {
-      setIsReady(true);
-    }
-  }, [qrRef.current]);
+    setIsReady(false);
+  }, [value]);
 
   const handleDownload = () => {
-    if (!qrRef.current || !isReady) {
-      console.error('QR code is not ready for download');
+    if (!qrRef.current) {
+      console.error('QR code ref is not available');
       return;
     }
 
@@ -81,7 +79,6 @@ const QrCode: React.FC<QrCodeProps> = ({
           variant="outline"
           className="w-full mt-4"
           leftIcon={<Download size={16} />}
-          disabled={!isReady}
         >
           Download QR Code
         </Button>
