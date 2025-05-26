@@ -23,58 +23,63 @@ const QrCode: React.FC<QrCodeProps> = ({
   const qrRef = useRef<SVGSVGElement>(null);
 
   const handleDownload = () => {
-    console.log('DOWNLOAD_HANDLER_ACTIVATED: Starting QR Code download process...');
-    
-    if (!qrRef.current) {
-      console.error('DOWNLOAD_HANDLER_ERROR: No SVG reference found');
-      return;
-    }
+    alert('DEBUG: ENTERING FORCED SVG DOWNLOAD HANDLER!');
+    console.log('DEBUG_SVG_DOWNLOAD: Handler started.');
 
     try {
-      // Get the SVG element
+      if (!qrRef.current) {
+        console.error('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - SVG ref is null');
+        alert('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - SVG ref is null');
+        return;
+      }
+
+      // Step 1: Get the SVG element
       const svgElement = qrRef.current;
-      console.log('DOWNLOAD_HANDLER_DEBUG: SVG element found:', svgElement.tagName);
+      if (!svgElement || svgElement.tagName.toLowerCase() !== 'svg') {
+        console.error('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - Not an SVG element. Found:', svgElement);
+        alert('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - Not an SVG element!');
+        return;
+      }
+      console.log('DEBUG_SVG_DOWNLOAD: SVG Element obtained:', svgElement);
 
-      // Create a clean copy of the SVG
-      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
-      
-      // Ensure proper SVG attributes
-      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      svgClone.setAttribute('version', '1.1');
-      
-      // Serialize to string
-      const serializer = new XMLSerializer();
-      const svgString = serializer.serializeToString(svgClone);
-      console.log('DOWNLOAD_HANDLER_DEBUG: SVG string generated:', svgString.substring(0, 100));
+      // Step 2: Create a clean clone
+      const clonedSvgElement = svgElement.cloneNode(true) as SVGElement;
+      clonedSvgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      console.log('DEBUG_SVG_DOWNLOAD: SVG Element cloned.');
 
-      // Create blob with correct MIME type
+      // Step 3: Serialize the cloned SVG to a string
+      const svgString = new XMLSerializer().serializeToString(clonedSvgElement);
+      console.log('DEBUG_SVG_DOWNLOAD: Serialized SVG String (first 300 chars):', svgString.substring(0, 300));
+      if (!svgString.toLowerCase().includes('<svg')) {
+        console.error('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - Serialized string does not appear to be SVG!');
+        alert('DEBUG_SVG_DOWNLOAD: CRITICAL ERROR - Serialized string is not SVG!');
+        return;
+      }
+
+      // Step 4: Create a Blob with the correct SVG MIME type
       const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      console.log('DOWNLOAD_HANDLER_DEBUG: Blob created with type:', blob.type);
+      console.log('DEBUG_SVG_DOWNLOAD: Blob created. Type:', blob.type, 'Size:', blob.size);
 
-      // Generate filename
-      const filename = `qr-code-${new Date().toISOString().slice(0, 10)}.svg`;
-      
-      // Create and trigger download
-      const url = URL.createObjectURL(blob);
+      // Step 5: Create a download link and trigger the download
       const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      console.log('DOWNLOAD_HANDLER_DEBUG: Download link created with filename:', filename);
-      
-      // Trigger download
+      link.href = URL.createObjectURL(blob);
+      const fileName = `qr-code-${new Date().toISOString().slice(0, 10)}.svg`;
+      link.download = fileName;
+      console.log('DEBUG_SVG_DOWNLOAD: Download link created. Href:', link.href, 'Download attr:', link.download);
+
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      URL.revokeObjectURL(link.href);
+      console.log('DEBUG_SVG_DOWNLOAD: Download triggered for', fileName);
+      alert('DEBUG_SVG_DOWNLOAD: SVG Download attempt finished. Check downloaded file.');
 
-      // Call custom download handler if provided
       if (onDownload) {
         onDownload();
       }
     } catch (error) {
-      console.error('DOWNLOAD_HANDLER_ERROR:', error);
+      console.error('DEBUG_SVG_DOWNLOAD: UNEXPECTED ERROR in handler:', error);
+      alert('DEBUG_SVG_DOWNLOAD: UNEXPECTED ERROR - Check console!');
     }
   };
 
