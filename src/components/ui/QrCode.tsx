@@ -29,47 +29,55 @@ const QrCode: React.FC<QrCodeProps> = ({
     // Check if QR code is ready when ref or value changes
     if (qrRef.current && value) {
       setIsReady(true);
-    } else {
-      setIsReady(false);
     }
-  }, [qrRef, value]);
+  }, [qrRef.current, value]);
 
   const handleDownload = () => {
-    // Early return if SVG is not ready
-    if (!qrRef.current || !isReady) {
-      console.warn('QR code is not ready yet');
-      return;
-    }
+    if (!qrRef.current || !isReady) return;
 
     try {
       // Get the SVG element
       const svgElement = qrRef.current;
       
-      // Create a deep clone of the SVG
-      const clonedSvg = svgElement.cloneNode(true) as SVGElement;
+      // Create a canvas element
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
       
-      // Add required SVG attributes
-      clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      // Set canvas size to match SVG
+      canvas.width = size;
+      canvas.height = size;
       
-      // Convert SVG to string
-      const svgData = new XMLSerializer().serializeToString(clonedSvg);
+      // Create a temporary image
+      const img = new Image();
       
-      // Create blob and object URL
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml' });
+      // Convert SVG to data URL
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
       
-      // Create and trigger download
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `qr-code-${Date.now()}.svg`;
-      document.body.appendChild(link);
-      link.click();
+      // When image loads, draw to canvas and create download
+      img.onload = () => {
+        // Draw white background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw QR code
+        ctx.drawImage(img, 0, 0);
+        
+        // Convert to PNG and download
+        const pngUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `qr-code-${Date.now()}.png`;
+        link.href = pngUrl;
+        link.click();
+        
+        // Cleanup
+        URL.revokeObjectURL(url);
+      };
       
-      // Cleanup
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      img.src = url;
       
-      // Call onDownload callback if provided
       if (onDownload) {
         onDownload();
       }
