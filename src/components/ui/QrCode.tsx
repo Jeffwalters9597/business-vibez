@@ -31,8 +31,8 @@ const QrCode: React.FC<QrCodeProps> = ({
   }, [value]);
 
   const handleDownload = () => {
-    if (!qrRef.current) {
-      console.error('QR code ref is not available');
+    if (!isReady || !qrRef.current) {
+      console.error('QR code ref is not available or not ready');
       return;
     }
 

@@ -215,7 +215,7 @@ const AdBuilder = () => {
 
   const handleDownload = () => {
     // In a real app, this would generate and download the ad image
-    toast.info('Download functionality coming soon');
+    toast('Download functionality coming soon');
   };
 
   const renderAdList = () => (
