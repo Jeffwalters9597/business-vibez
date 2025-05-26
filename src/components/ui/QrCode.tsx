@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download } from 'lucide-react';
 import Button from './Button';
@@ -23,14 +23,22 @@ const QrCode: React.FC<QrCodeProps> = ({
   hideDownload = false
 }) => {
   const qrRef = useRef<SVGSVGElement>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Set ready state when QR code is rendered
+    if (qrRef.current) {
+      setIsReady(true);
+    }
+  }, [qrRef.current]);
 
   const handleDownload = () => {
-    try {
-      if (!qrRef.current) {
-        console.error('SVG ref is null');
-        return;
-      }
+    if (!qrRef.current || !isReady) {
+      console.error('QR code is not ready for download');
+      return;
+    }
 
+    try {
       const svgElement = qrRef.current;
       const clonedSvgElement = svgElement.cloneNode(true) as SVGElement;
       clonedSvgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
@@ -64,6 +72,7 @@ const QrCode: React.FC<QrCodeProps> = ({
           size={size}
           level={level}
           includeMargin={includeMargin}
+          onLoad={() => setIsReady(true)}
         />
       </div>
       {!hideDownload && (
@@ -72,6 +81,7 @@ const QrCode: React.FC<QrCodeProps> = ({
           variant="outline"
           className="w-full mt-4"
           leftIcon={<Download size={16} />}
+          disabled={!isReady}
         >
           Download QR Code
         </Button>
