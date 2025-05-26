@@ -222,9 +222,16 @@ const AdBuilder = () => {
     }
 
     try {
+      // Wait for fonts to load before generating the image
+      await document.fonts.ready;
+
+      // Add a small delay to ensure fonts are rendered
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const dataUrl = await toPng(previewRef.current, {
         quality: 1.0,
-        pixelRatio: 2
+        pixelRatio: 2,
+        skipFonts: true // Skip font embedding to avoid CORS issues
       });
       
       const link = document.createElement('a');
