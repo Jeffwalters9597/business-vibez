@@ -15,7 +15,7 @@ interface QrCodeProps {
 
 const QrCode: React.FC<QrCodeProps> = ({
   value,
-  size = 256,
+  size = 512, // Doubled from 256 to 512
   level = 'H',
   includeMargin = true,
   className,
@@ -69,7 +69,9 @@ const QrCode: React.FC<QrCodeProps> = ({
         className="inline-block"
         style={{
           lineHeight: 0, // Remove any extra space
-          fontSize: 0 // Remove any extra space
+          fontSize: 0, // Remove any extra space
+          width: size, // Explicitly set container width
+          height: size // Explicitly set container height
         }}
       >
         <QRCodeSVG
