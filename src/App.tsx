@@ -11,7 +11,6 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import Dashboard from './pages/dashboard/Dashboard';
-import QrCodeGenerator from './pages/dashboard/QrCodeGenerator';
 import AdBuilder from './pages/dashboard/AdBuilder';
 import SmsManager from './pages/dashboard/SmsManager';
 import View from './pages/View';
@@ -67,7 +66,6 @@ function App() {
         </ProtectedRoute>
       }>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/qr-codes" element={<QrCodeGenerator />} />
         <Route path="/ad-builder" element={<AdBuilder />} />
         <Route path="/sms-manager" element={<SmsManager />} />
       </Route>

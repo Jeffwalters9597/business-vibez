@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { 
   Zap, 
   Home, 
-  QrCode, 
   Palette, 
   MessageSquare, 
   Settings, 
@@ -42,7 +41,6 @@ const DashboardLayout = () => {
   const navItems = [
     { to: '/', icon: <Home size={20} />, label: 'Dashboard' },
     { to: '/ad-builder', icon: <Palette size={20} />, label: 'Ad Builder' },
-    { to: '/qr-codes', icon: <QrCode size={20} />, label: 'QR Codes' },
     { to: '/sms-manager', icon: <MessageSquare size={20} />, label: 'SMS Manager' },
   ];
   
