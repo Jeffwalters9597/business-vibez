@@ -9,7 +9,6 @@ import Input from '../../components/ui/Input';
 import { 
   Zap, 
   Home, 
-  QrCode, 
   Palette, 
   MessageSquare, 
   TrendingUp, 
@@ -25,7 +24,6 @@ import {
 import toast from 'react-hot-toast';
 
 interface DashboardStats {
-  qrCodes: number;
   adDesigns: number;
   smsMessages: number;
 }
@@ -40,7 +38,6 @@ interface UserSubscription {
 }
 
 interface UsageLimits {
-  qr_codes_count: number;
   sms_count: number;
   api_calls_count: number;
   reset_date: string;
@@ -53,7 +50,6 @@ interface UserProfile {
 const Dashboard = () => {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats>({
-    qrCodes: 0,
     adDesigns: 0,
     smsMessages: 0,
   });
@@ -126,14 +122,6 @@ const Dashboard = () => {
           setUsageLimits(limitsData);
         }
 
-        // Fetch QR codes count
-        const { count: qrCount, error: qrError } = await supabase
-          .from('qr_codes')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user?.id);
-
-        if (qrError) throw qrError;
-
         // Fetch ad designs count
         const { count: adCount, error: adError } = await supabase
           .from('ad_designs')
@@ -143,7 +131,6 @@ const Dashboard = () => {
         if (adError) throw adError;
 
         setStats({
-          qrCodes: qrCount || 0,
           adDesigns: adCount || 0,
           smsMessages: usageLimits?.sms_count || 0,
         });
@@ -204,7 +191,6 @@ const Dashboard = () => {
         tier: {
           name: 'Pro',
           features: [
-            "Unlimited QR codes",
             "Unlimited ad spaces",
             "1000 SMS credits/month",
             "Priority support",
@@ -236,17 +222,6 @@ const Dashboard = () => {
       color: 'bg-accent-50 border-accent-200',
       limit: isPro ? '∞' : '1',
       current: stats.adDesigns
-    },
-    {
-      title: 'QR Codes',
-      description: 'Create and manage QR codes for your business',
-      icon: <QrCode size={24} className="text-primary-500" />,
-      stat: stats.qrCodes,
-      statLabel: 'Active QR codes',
-      linkTo: '/qr-codes',
-      color: 'bg-primary-50 border-primary-200',
-      limit: isPro ? '∞' : '1',
-      current: stats.qrCodes
     },
     {
       title: 'SMS Manager',
@@ -365,7 +340,7 @@ const Dashboard = () => {
       )}
       
       {/* Feature cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {features.map((feature) => (
           <Card key={feature.title} className={`border ${feature.color} transition-all hover:shadow-md`}>
             <CardHeader>
@@ -448,20 +423,6 @@ const Dashboard = () => {
                   </div>
                 </div>
               </div>
-              <div className="border-b border-gray-200 pb-4">
-                <div className="flex items-center">
-                  <div className="p-2 rounded-full bg-primary-100 text-primary-500 mr-3">
-                    <QrCode size={16} />
-                  </div>
-                  <div>
-                    <p className="font-medium">QR Code Generated</p>
-                    <p className="text-sm text-gray-500">Menu Link</p>
-                  </div>
-                  <div className="ml-auto text-right">
-                    <p className="text-sm text-gray-500">Yesterday</p>
-                  </div>
-                </div>
-              </div>
               <div className="pb-4">
                 <div className="flex items-center">
                   <div className="p-2 rounded-full bg-secondary-100 text-secondary-500 mr-3">
@@ -501,10 +462,6 @@ const Dashboard = () => {
             <div className="space-y-4">
               <h3 className="font-semibold">Pro Plan Includes:</h3>
               <ul className="space-y-3">
-                <li className="flex items-center">
-                  <Check size={20} className="text-success-500 mr-2" />
-                  <span>Unlimited QR codes</span>
-                </li>
                 <li className="flex items-center">
                   <Check size={20} className="text-success-500 mr-2" />
                   <span>Unlimited ad spaces</span>
