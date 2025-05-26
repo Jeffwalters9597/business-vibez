@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { supabase } from '../../lib/supabase';
 import Card, { CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { QRCodeCanvas } from 'qrcode.react';
+import QrCode from '../../components/ui/QrCode';
 import { 
   Download, 
   Plus, 
@@ -12,7 +12,7 @@ import {
   Save, 
   Eye,
   Wand2,
-  QrCode
+  QrCode as QrIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -377,13 +377,12 @@ const AdBuilder = () => {
                 <CardTitle>QR Code</CardTitle>
               </CardHeader>
               <CardContent className="text-center">
-                <div className="bg-white p-4 rounded-lg inline-block">
-                  <QRCodeCanvas
-                    value={qrUrl}
-                    size={200}
-                    level="H"
-                  />
-                </div>
+                <QrCode
+                  value={qrUrl}
+                  size={200}
+                  level="H"
+                  includeMargin
+                />
                 <p className="mt-4 text-sm text-gray-600">
                   Scan this QR code to view the ad
                 </p>
@@ -391,24 +390,6 @@ const AdBuilder = () => {
                   {qrUrl}
                 </p>
               </CardContent>
-              <CardFooter>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  leftIcon={<Download size={16} />}
-                  onClick={() => {
-                    const canvas = document.querySelector('canvas');
-                    if (canvas) {
-                      const link = document.createElement('a');
-                      link.download = `qr-${selectedDesign.name}.png`;
-                      link.href = canvas.toDataURL('image/png');
-                      link.click();
-                    }
-                  }}
-                >
-                  Download QR Code
-                </Button>
-              </CardFooter>
             </Card>
 
             <Card>
