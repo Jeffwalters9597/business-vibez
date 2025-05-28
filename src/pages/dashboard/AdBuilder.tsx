@@ -10,7 +10,7 @@ import {
   Trash2, 
   Save, 
   Eye,
-  Wand2,
+  Link,
   QrCode as QrIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,8 +22,9 @@ interface AdDesign {
   created_at: string;
   background: string;
   content: {
-    headline: string;
-    subheadline: string;
+    headline?: string;
+    subheadline?: string;
+    redirectUrl?: string;
   };
   image_url?: string;
   ad_space_id?: string;
@@ -42,17 +43,14 @@ const AdBuilder = () => {
   const { user } = useAuthStore();
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail'>('list');
   const [selectedDesign, setSelectedDesign] = useState<AdDesign | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savedDesigns, setSavedDesigns] = useState<AdDesign[]>([]);
   const previewRef = useRef<HTMLDivElement>(null);
   const [adForm, setAdForm] = useState({
     name: '',
-    headline: '',
-    subheadline: '',
     background: '#FFFFFF',
-    businessType: ''
+    redirectUrl: ''
   });
 
   useEffect(() => {
@@ -87,40 +85,14 @@ const AdBuilder = () => {
     return `${window.location.origin}/view?ad=${adId}`;
   };
 
-  const handleGenerateAI = async () => {
-    if (!adForm.businessType) {
-      toast.error('Please enter your business type');
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      // Simulate AI generation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setAdForm(prev => ({
-        ...prev,
-        headline: `${adForm.businessType} - Special Offer!`,
-        subheadline: `Visit our ${adForm.businessType} today and enjoy exclusive deals on our premium products!`
-      }));
-
-      toast.success('AI content generated!');
-    } catch (error) {
-      toast.error('Failed to generate content');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const handleSaveAd = async () => {
     if (!adForm.name) {
       toast.error('Please provide a name for your ad');
       return;
     }
 
-    if (!adForm.headline || !adForm.subheadline) {
-      toast.error('Please provide both headline and subheadline');
+    if (!adForm.redirectUrl) {
+      toast.error('Please provide a redirect URL');
       return;
     }
 
@@ -133,10 +105,9 @@ const AdBuilder = () => {
         .insert([{
           user_id: user?.id,
           title: adForm.name,
-          description: adForm.subheadline,
+          description: `Ad space for ${adForm.name}`,
           content: {
-            headline: adForm.headline,
-            subheadline: adForm.subheadline
+            url: adForm.redirectUrl
           },
           theme: {
             backgroundColor: adForm.background,
@@ -156,8 +127,7 @@ const AdBuilder = () => {
           name: adForm.name,
           background: adForm.background,
           content: {
-            headline: adForm.headline,
-            subheadline: adForm.subheadline
+            redirectUrl: adForm.redirectUrl
           },
           ad_space_id: adSpace.id
         }])
@@ -180,10 +150,8 @@ const AdBuilder = () => {
       // Reset form
       setAdForm({
         name: '',
-        headline: '',
-        subheadline: '',
         background: '#FFFFFF',
-        businessType: ''
+        redirectUrl: ''
       });
     } catch (error: any) {
       console.error('Save error:', error);
@@ -255,9 +223,12 @@ const AdBuilder = () => {
                       className="absolute inset-0 w-full h-full object-cover"
                     />
                   )}
-                  <div className="relative z-10">
-                    <h3 className="text-lg font-bold mb-2 text-white">{design.content.headline}</h3>
-                    <p className="text-sm text-white">{design.content.subheadline}</p>
+                  <div className="relative z-10 flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <p className="text-sm text-white bg-black bg-opacity-30 p-2 rounded">
+                        {design.content.redirectUrl || design.ad_spaces?.content?.url || 'No redirect URL'}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -310,6 +281,7 @@ const AdBuilder = () => {
     }
 
     const qrUrl = generateQrUrl(selectedDesign.ad_spaces.id);
+    const redirectUrl = selectedDesign.content.redirectUrl || selectedDesign.ad_spaces.content.url;
 
     return (
       <div className="space-y-6">
@@ -338,13 +310,12 @@ const AdBuilder = () => {
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 )}
-                <div className="relative z-10 text-center">
-                  <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                    {selectedDesign.content.headline}
-                  </h2>
-                  <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                    {selectedDesign.content.subheadline}
-                  </p>
+                <div className="relative z-10 flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <p className="text-white bg-black bg-opacity-30 p-3 rounded">
+                      {redirectUrl || 'No redirect URL'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -395,17 +366,8 @@ const AdBuilder = () => {
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Content</h3>
-                  <div className="mt-2 space-y-2">
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-sm font-medium">Headline</p>
-                      <p className="mt-1">{selectedDesign.content.headline}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded">
-                      <p className="text-sm font-medium">Subheadline</p>
-                      <p className="mt-1">{selectedDesign.content.subheadline}</p>
-                    </div>
-                  </div>
+                  <h3 className="text-sm font-medium text-gray-500">Redirect URL</h3>
+                  <p className="mt-1 break-all">{redirectUrl || 'None'}</p>
                 </div>
               </CardContent>
             </Card>
@@ -437,40 +399,12 @@ const AdBuilder = () => {
               placeholder="Enter ad name"
             />
 
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                AI Content Generator
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  value={adForm.businessType}
-                  onChange={(e) => setAdForm({ ...adForm, businessType: e.target.value })}
-                  placeholder="Enter your business type"
-                  className="flex-1"
-                />
-                <Button
-                  variant="outline"
-                  onClick={handleGenerateAI}
-                  isLoading={isGenerating}
-                  leftIcon={<Wand2 size={16} />}
-                >
-                  AI Assist
-                </Button>
-              </div>
-            </div>
-
             <Input
-              label="Headline"
-              value={adForm.headline}
-              onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
-              placeholder="Enter headline text"
-            />
-
-            <Input
-              label="Subheadline"
-              value={adForm.subheadline}
-              onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
-              placeholder="Enter subheadline text"
+              label="Redirect URL"
+              value={adForm.redirectUrl}
+              onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
+              placeholder="Enter the URL where users will be redirected"
+              leftIcon={<Link size={16} />}
             />
 
             <div>
@@ -507,13 +441,12 @@ const AdBuilder = () => {
               className="aspect-video rounded-lg p-8 relative"
               style={{ backgroundColor: adForm.background }}
             >
-              <div className="text-center">
-                <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                  {adForm.headline || 'Your Headline Here'}
-                </h2>
-                <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                  {adForm.subheadline || 'Your subheadline text will appear here'}
-                </p>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <p className="text-white bg-black bg-opacity-30 p-3 rounded">
+                    {adForm.redirectUrl || 'Enter a redirect URL'}
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
