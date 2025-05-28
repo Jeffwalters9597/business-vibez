@@ -12,7 +12,8 @@ import {
   Eye,
   Link,
   Wand2,
-  QrCode as QrIcon
+  QrCode as QrIcon,
+  Edit
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,7 +43,7 @@ interface AdDesign {
 
 const AdBuilder = () => {
   const { user } = useAuthStore();
-  const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail' | 'edit'>('list');
   const [selectedDesign, setSelectedDesign] = useState<AdDesign | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -129,65 +130,133 @@ const AdBuilder = () => {
       return;
     }
 
+    // For custom mode, validate headline and subheadline
+    if (adMode === 'custom' && (!adForm.headline || !adForm.subheadline)) {
+      toast.error('Please provide both headline and subheadline');
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      // First create the ad space
-      const { data: adSpace, error: adSpaceError } = await supabase
-        .from('ad_spaces')
-        .insert([{
-          user_id: user?.id,
-          title: adForm.name,
-          description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
-          content: adMode === 'custom' 
-            ? {
-                headline: adForm.headline,
-                subheadline: adForm.subheadline
-              }
-            : {
-                url: adForm.redirectUrl
-              },
-          theme: {
-            backgroundColor: adForm.background,
-            textColor: '#FFFFFF'
-          }
-        }])
-        .select()
-        .single();
+      if (selectedDesign && viewMode === 'edit') {
+        // Update existing ad design and ad space
+        const { data: adSpace, error: adSpaceError } = await supabase
+          .from('ad_spaces')
+          .update({
+            title: adForm.name,
+            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            content: adMode === 'custom' 
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  url: adForm.redirectUrl
+                },
+            theme: {
+              backgroundColor: adForm.background,
+              textColor: '#FFFFFF'
+            }
+          })
+          .eq('id', selectedDesign.ad_space_id || '')
+          .select()
+          .single();
 
-      if (adSpaceError) throw adSpaceError;
+        if (adSpaceError) throw adSpaceError;
 
-      // Then create the ad design linked to the ad space
-      const { data: adDesign, error: adError } = await supabase
-        .from('ad_designs')
-        .insert([{
-          user_id: user?.id,
-          name: adForm.name,
-          background: adForm.background,
-          content: adMode === 'custom'
-            ? {
-                headline: adForm.headline,
-                subheadline: adForm.subheadline
-              }
-            : {
-                redirectUrl: adForm.redirectUrl
-              },
-          ad_space_id: adSpace.id
-        }])
-        .select(`
-          *,
-          ad_spaces (
-            id,
-            title,
-            content
-          )
-        `)
-        .single();
+        const { data: adDesign, error: adError } = await supabase
+          .from('ad_designs')
+          .update({
+            name: adForm.name,
+            background: adForm.background,
+            content: adMode === 'custom'
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  redirectUrl: adForm.redirectUrl
+                }
+          })
+          .eq('id', selectedDesign.id)
+          .select(`
+            *,
+            ad_spaces (
+              id,
+              title,
+              content
+            )
+          `)
+          .single();
 
-      if (adError) throw adError;
+        if (adError) throw adError;
 
-      setSavedDesigns(prev => [adDesign, ...prev]);
-      toast.success('Ad design created!');
+        // Update the ad in the list
+        setSavedDesigns(prev => prev.map(design => 
+          design.id === adDesign.id ? adDesign : design
+        ));
+        
+        toast.success('Ad design updated!');
+      } else {
+        // First create the ad space
+        const { data: adSpace, error: adSpaceError } = await supabase
+          .from('ad_spaces')
+          .insert([{
+            user_id: user?.id,
+            title: adForm.name,
+            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            content: adMode === 'custom' 
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  url: adForm.redirectUrl
+                },
+            theme: {
+              backgroundColor: adForm.background,
+              textColor: '#FFFFFF'
+            }
+          }])
+          .select()
+          .single();
+
+        if (adSpaceError) throw adSpaceError;
+
+        // Then create the ad design linked to the ad space
+        const { data: adDesign, error: adError } = await supabase
+          .from('ad_designs')
+          .insert([{
+            user_id: user?.id,
+            name: adForm.name,
+            background: adForm.background,
+            content: adMode === 'custom'
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  redirectUrl: adForm.redirectUrl
+                },
+            ad_space_id: adSpace.id
+          }])
+          .select(`
+            *,
+            ad_spaces (
+              id,
+              title,
+              content
+            )
+          `)
+          .single();
+
+        if (adError) throw adError;
+
+        setSavedDesigns(prev => [adDesign, ...prev]);
+        toast.success('Ad design created!');
+      }
+      
       setViewMode('list');
       
       // Reset form
@@ -200,6 +269,7 @@ const AdBuilder = () => {
         businessType: ''
       });
       setAdMode('custom');
+      setSelectedDesign(null);
     } catch (error: any) {
       console.error('Save error:', error);
       toast.error(error.message || 'Failed to save design');
@@ -226,6 +296,28 @@ const AdBuilder = () => {
     } catch (error) {
       toast.error('Failed to delete design');
     }
+  };
+
+  const handleEditAd = (design: AdDesign) => {
+    setSelectedDesign(design);
+    
+    // Determine if it's a redirect-only ad or a custom ad
+    const isRedirectMode = !design.content.headline && 
+      (design.content.redirectUrl || design.ad_spaces?.content?.url);
+    
+    setAdMode(isRedirectMode ? 'redirect' : 'custom');
+    
+    // Populate the form with the design data
+    setAdForm({
+      name: design.name,
+      headline: design.content.headline || '',
+      subheadline: design.content.subheadline || '',
+      background: design.background || '#FFFFFF',
+      redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || '',
+      businessType: ''
+    });
+    
+    setViewMode('edit');
   };
 
   const renderAdList = () => (
@@ -273,7 +365,7 @@ const AdBuilder = () => {
                   <div className="relative z-10 flex items-center justify-center h-full">
                     {design.content.headline ? (
                       <div className="text-center">
-                        <h3 className="text-lg font-bold mb-2 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        <h3 className="text-lg font-bold mb-2 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                           {design.content.headline}
                         </h3>
                         <p className="text-sm text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
@@ -296,21 +388,33 @@ const AdBuilder = () => {
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedDesign(design);
-                    setViewMode('detail');
-                  }}
-                  leftIcon={<Eye size={16} />}
-                >
-                  View
-                </Button>
+                <div className="flex space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setSelectedDesign(design);
+                      setViewMode('detail');
+                    }}
+                    leftIcon={<Eye size={16} />}
+                    size="sm"
+                  >
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => handleEditAd(design)}
+                    leftIcon={<Edit size={16} />}
+                    size="sm"
+                  >
+                    Edit
+                  </Button>
+                </div>
                 <Button 
                   variant="outline"
                   className="text-error-500 hover:bg-error-50"
                   onClick={() => handleDeleteAd(design.id)}
                   leftIcon={<Trash2 size={16} />}
+                  size="sm"
                 >
                   Delete
                 </Button>
@@ -349,6 +453,13 @@ const AdBuilder = () => {
             Back to List
           </Button>
           <h1 className="text-2xl font-bold">{selectedDesign.name}</h1>
+          <Button 
+            variant="outline" 
+            onClick={() => handleEditAd(selectedDesign)}
+            leftIcon={<Edit size={16} />}
+          >
+            Edit
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -378,7 +489,12 @@ const AdBuilder = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      {/* Empty div for custom mode - no headline/subheadline */}
+                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        {selectedDesign.content.headline}
+                      </h2>
+                      <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        {selectedDesign.content.subheadline}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -438,7 +554,17 @@ const AdBuilder = () => {
                     </>
                   ) : (
                     <>
-                      {/* Completely empty - no heading at all */}
+                      <h3 className="text-sm font-medium text-gray-500">Content</h3>
+                      <div className="mt-2 space-y-2">
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm font-medium">Headline</p>
+                          <p className="mt-1">{selectedDesign.content.headline}</p>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm font-medium">Subheadline</p>
+                          <p className="mt-1">{selectedDesign.content.subheadline}</p>
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -459,7 +585,7 @@ const AdBuilder = () => {
         <h1 className="text-2xl font-bold">Create New Ad</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Ad Settings</CardTitle>
@@ -491,7 +617,43 @@ const AdBuilder = () => {
             </div>
 
             {adMode === 'custom' ? (
-              <div></div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    AI Content Generator
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={adForm.businessType}
+                      onChange={(e) => setAdForm({ ...adForm, businessType: e.target.value })}
+                      placeholder="Enter your business type"
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={handleGenerateAI}
+                      isLoading={isGenerating}
+                      leftIcon={<Wand2 size={16} />}
+                    >
+                      AI Assist
+                    </Button>
+                  </div>
+                </div>
+
+                <Input
+                  label="Headline"
+                  value={adForm.headline}
+                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
+                  placeholder="Enter headline text"
+                />
+
+                <Input
+                  label="Subheadline"
+                  value={adForm.subheadline}
+                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
+                  placeholder="Enter subheadline text"
+                />
+              </>
             ) : (
               <Input
                 label="Redirect URL"
@@ -501,6 +663,18 @@ const AdBuilder = () => {
                 leftIcon={<Link size={16} />}
               />
             )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Background Color
+              </label>
+              <input
+                type="color"
+                value={adForm.background}
+                onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
+                className="w-full h-10 rounded-md cursor-pointer"
+              />
+            </div>
           </CardContent>
           <CardFooter>
             <Button 
@@ -509,9 +683,162 @@ const AdBuilder = () => {
               leftIcon={<Save size={16} />}
               isLoading={isSaving}
             >
-              {adMode === 'custom' ? 'Continue to design' : 'Save Ad Design'}
+              Save Ad Design
             </Button>
           </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              ref={previewRef}
+              className="aspect-video rounded-lg p-8 relative"
+              style={{ backgroundColor: adForm.background }}
+            >
+              <div className="text-center">
+                {adMode === 'custom' ? (
+                  <>
+                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.headline || 'Your Headline Here'}
+                    </h2>
+                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.subheadline || 'Your subheadline text will appear here'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-white bg-black bg-opacity-30 p-3 rounded">
+                    {adForm.redirectUrl || 'Enter a redirect URL'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+
+  const renderAdEditor = () => (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" onClick={() => setViewMode('list')}>
+          Back to List
+        </Button>
+        <h1 className="text-2xl font-bold">Edit Ad Design</h1>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Ad Settings</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              label="Ad Name"
+              value={adForm.name}
+              onChange={(e) => setAdForm({ ...adForm, name: e.target.value })}
+              placeholder="Enter ad name"
+            />
+
+            <div className="pt-2">
+              <label className="block text-sm font-medium mb-2">Ad Type</label>
+              <div className="flex space-x-4 mb-4">
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'custom' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('custom')}
+                >
+                  <h3 className="font-medium text-sm">Custom Ad</h3>
+                </div>
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'redirect' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('redirect')}
+                >
+                  <h3 className="font-medium text-sm">Redirect Only</h3>
+                </div>
+              </div>
+            </div>
+
+            {adMode === 'custom' ? (
+              <>
+                <Input
+                  label="Headline"
+                  value={adForm.headline}
+                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
+                  placeholder="Enter headline text"
+                />
+
+                <Input
+                  label="Subheadline"
+                  value={adForm.subheadline}
+                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
+                  placeholder="Enter subheadline text"
+                />
+              </>
+            ) : (
+              <Input
+                label="Redirect URL"
+                value={adForm.redirectUrl}
+                onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
+                placeholder="Enter the URL where users will be redirected"
+                leftIcon={<Link size={16} />}
+              />
+            )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Background Color
+              </label>
+              <input
+                type="color"
+                value={adForm.background}
+                onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
+                className="w-full h-10 rounded-md cursor-pointer"
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              onClick={handleSaveAd} 
+              className="w-full" 
+              leftIcon={<Save size={16} />}
+              isLoading={isSaving}
+            >
+              Update Ad Design
+            </Button>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Preview</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div 
+              ref={previewRef}
+              className="aspect-video rounded-lg p-8 relative"
+              style={{ backgroundColor: adForm.background }}
+            >
+              <div className="text-center">
+                {adMode === 'custom' ? (
+                  <>
+                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.headline || 'Your Headline Here'}
+                    </h2>
+                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.subheadline || 'Your subheadline text will appear here'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-white bg-black bg-opacity-30 p-3 rounded">
+                    {adForm.redirectUrl || 'Enter a redirect URL'}
+                  </p>
+                )}
+              </div>
+            </div>
+          </CardContent>
         </Card>
       </div>
     </div>
@@ -522,6 +849,7 @@ const AdBuilder = () => {
       {viewMode === 'list' && renderAdList()}
       {viewMode === 'detail' && renderAdDetail()}
       {viewMode === 'create' && renderAdCreator()}
+      {viewMode === 'edit' && renderAdEditor()}
     </div>
   );
 };
