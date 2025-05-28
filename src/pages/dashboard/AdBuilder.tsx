@@ -478,7 +478,7 @@ const AdBuilder = () => {
         <h1 className="text-2xl font-bold">Create New Ad</h1>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Ad Settings</CardTitle>
@@ -491,50 +491,26 @@ const AdBuilder = () => {
               placeholder="Enter ad name"
             />
 
-            <div className="border-t border-gray-200 pt-4">
+            <div className="pt-2">
               <label className="block text-sm font-medium mb-2">Ad Type</label>
               <div className="flex space-x-4 mb-4">
                 <div 
-                  className={`p-4 border rounded-lg cursor-pointer flex-1 text-center ${adMode === 'custom' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'custom' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
                   onClick={() => setAdMode('custom')}
                 >
-                  <h3 className="font-medium">Custom Ad</h3>
-                  <p className="text-sm text-gray-500">Design a fully customized ad</p>
+                  <h3 className="font-medium text-sm">Custom Ad</h3>
                 </div>
                 <div 
-                  className={`p-4 border rounded-lg cursor-pointer flex-1 text-center ${adMode === 'redirect' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'redirect' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
                   onClick={() => setAdMode('redirect')}
                 >
-                  <h3 className="font-medium">Redirect Only</h3>
-                  <p className="text-sm text-gray-500">Just use a redirect link</p>
+                  <h3 className="font-medium text-sm">Redirect Only</h3>
                 </div>
               </div>
             </div>
 
             {adMode === 'custom' ? (
               <>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    AI Content Generator
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={adForm.businessType}
-                      onChange={(e) => setAdForm({ ...adForm, businessType: e.target.value })}
-                      placeholder="Enter your business type"
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleGenerateAI}
-                      isLoading={isGenerating}
-                      leftIcon={<Wand2 size={16} />}
-                    >
-                      AI Assist
-                    </Button>
-                  </div>
-                </div>
-
                 <Input
                   label="Headline"
                   value={adForm.headline}
@@ -558,18 +534,6 @@ const AdBuilder = () => {
                 leftIcon={<Link size={16} />}
               />
             )}
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Background Color
-              </label>
-              <input
-                type="color"
-                value={adForm.background}
-                onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
-                className="w-full h-10 rounded-md cursor-pointer"
-              />
-            </div>
           </CardContent>
           <CardFooter>
             <Button 
@@ -581,38 +545,6 @@ const AdBuilder = () => {
               Save Ad Design
             </Button>
           </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Preview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div 
-              ref={previewRef}
-              className="aspect-video rounded-lg p-8 relative"
-              style={{ backgroundColor: adForm.background }}
-            >
-              <div className="flex items-center justify-center h-full">
-                {adMode === 'custom' ? (
-                  <div className="text-center">
-                    <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.headline || 'Your Headline Here'}
-                    </h2>
-                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.subheadline || 'Your subheadline text will appear here'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <p className="text-white bg-black bg-opacity-30 p-3 rounded">
-                      {adForm.redirectUrl || 'Enter a redirect URL'}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </CardContent>
         </Card>
       </div>
     </div>
