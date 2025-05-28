@@ -510,11 +510,7 @@ const AdBuilder = () => {
             </div>
 
             {adMode === 'custom' ? (
-              <div className="p-4 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">
-                  Custom ad content will be provided by another server. Save this ad to continue.
-                </p>
-              </div>
+              <div></div>
             ) : (
               <Input
                 label="Redirect URL"
@@ -532,7 +528,7 @@ const AdBuilder = () => {
               leftIcon={<Save size={16} />}
               isLoading={isSaving}
             >
-              Save Ad Design
+              {adMode === 'custom' ? 'Continue to design' : 'Save Ad Design'}
             </Button>
           </CardFooter>
         </Card>
