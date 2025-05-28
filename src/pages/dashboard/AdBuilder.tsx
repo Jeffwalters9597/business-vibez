@@ -11,7 +11,6 @@ import {
   Save, 
   Eye,
   Link,
-  Wand2,
   QrCode as QrIcon,
   Edit
 } from 'lucide-react';
@@ -45,7 +44,6 @@ const AdBuilder = () => {
   const { user } = useAuthStore();
   const [viewMode, setViewMode] = useState<'list' | 'create' | 'detail' | 'edit'>('list');
   const [selectedDesign, setSelectedDesign] = useState<AdDesign | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [savedDesigns, setSavedDesigns] = useState<AdDesign[]>([]);
@@ -56,8 +54,7 @@ const AdBuilder = () => {
     headline: '',
     subheadline: '',
     background: '#FFFFFF',
-    redirectUrl: '',
-    businessType: ''
+    redirectUrl: ''
   });
 
   useEffect(() => {
@@ -90,32 +87,6 @@ const AdBuilder = () => {
 
   const generateQrUrl = (adId: string) => {
     return `${window.location.origin}/view?ad=${adId}`;
-  };
-
-  const handleGenerateAI = async () => {
-    if (!adForm.businessType) {
-      toast.error('Please enter your business type');
-      return;
-    }
-
-    setIsGenerating(true);
-
-    try {
-      // Simulate AI generation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      setAdForm(prev => ({
-        ...prev,
-        headline: `${adForm.businessType} - Special Offer!`,
-        subheadline: `Visit our ${adForm.businessType} today and enjoy exclusive deals on our premium products!`
-      }));
-
-      toast.success('AI content generated!');
-    } catch (error) {
-      toast.error('Failed to generate content');
-    } finally {
-      setIsGenerating(false);
-    }
   };
 
   const handleSaveAd = async () => {
@@ -265,8 +236,7 @@ const AdBuilder = () => {
         headline: '',
         subheadline: '',
         background: '#FFFFFF',
-        redirectUrl: '',
-        businessType: ''
+        redirectUrl: ''
       });
       setAdMode('custom');
       setSelectedDesign(null);
@@ -313,8 +283,7 @@ const AdBuilder = () => {
       headline: design.content.headline || '',
       subheadline: design.content.subheadline || '',
       background: design.background || '#FFFFFF',
-      redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || '',
-      businessType: ''
+      redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || ''
     });
     
     setViewMode('edit');
@@ -618,28 +587,6 @@ const AdBuilder = () => {
 
             {adMode === 'custom' ? (
               <>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    AI Content Generator
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={adForm.businessType}
-                      onChange={(e) => setAdForm({ ...adForm, businessType: e.target.value })}
-                      placeholder="Enter your business type"
-                      className="flex-1"
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={handleGenerateAI}
-                      isLoading={isGenerating}
-                      leftIcon={<Wand2 size={16} />}
-                    >
-                      AI Assist
-                    </Button>
-                  </div>
-                </div>
-
                 <Input
                   label="Headline"
                   value={adForm.headline}
