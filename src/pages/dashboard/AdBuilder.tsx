@@ -510,21 +510,11 @@ const AdBuilder = () => {
             </div>
 
             {adMode === 'custom' ? (
-              <>
-                <Input
-                  label="Headline"
-                  value={adForm.headline}
-                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
-                  placeholder="Enter headline text"
-                />
-
-                <Input
-                  label="Subheadline"
-                  value={adForm.subheadline}
-                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
-                  placeholder="Enter subheadline text"
-                />
-              </>
+              <div className="p-4 bg-gray-50 rounded-md">
+                <p className="text-sm text-gray-600">
+                  Custom ad content will be provided by another server. Save this ad to continue.
+                </p>
+              </div>
             ) : (
               <Input
                 label="Redirect URL"
