@@ -123,11 +123,7 @@ const AdBuilder = () => {
       return;
     }
 
-    if (adMode === 'custom' && (!adForm.headline || !adForm.subheadline)) {
-      toast.error('Please provide both headline and subheadline');
-      return;
-    }
-
+    // Only validate redirect URL for redirect mode
     if (adMode === 'redirect' && !adForm.redirectUrl) {
       toast.error('Please provide a redirect URL');
       return;
