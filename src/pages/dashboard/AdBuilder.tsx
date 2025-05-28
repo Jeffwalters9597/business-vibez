@@ -438,7 +438,7 @@ const AdBuilder = () => {
                     </>
                   ) : (
                     <>
-                      <h3 className="text-sm font-medium text-gray-500">Content</h3>
+                      {/* Completely empty - no heading at all */}
                     </>
                   )}
                 </div>
