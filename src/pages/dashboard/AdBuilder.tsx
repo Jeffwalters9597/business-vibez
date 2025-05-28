@@ -378,12 +378,7 @@ const AdBuilder = () => {
                     </div>
                   ) : (
                     <div className="text-center">
-                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        {selectedDesign.content.headline}
-                      </h2>
-                      <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        {selectedDesign.content.subheadline}
-                      </p>
+                      {/* Empty div for custom mode - no headline/subheadline */}
                     </div>
                   )}
                 </div>
@@ -444,16 +439,7 @@ const AdBuilder = () => {
                   ) : (
                     <>
                       <h3 className="text-sm font-medium text-gray-500">Content</h3>
-                      <div className="mt-2 space-y-2">
-                        <div className="bg-gray-50 p-3 rounded">
-                          <p className="text-sm font-medium">Headline</p>
-                          <p className="mt-1">{selectedDesign.content.headline}</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded">
-                          <p className="text-sm font-medium">Subheadline</p>
-                          <p className="mt-1">{selectedDesign.content.subheadline}</p>
-                        </div>
-                      </div>
+                      <p className="mt-1 text-gray-600">Custom ad content will be provided by external design tools</p>
                     </>
                   )}
                 </div>
