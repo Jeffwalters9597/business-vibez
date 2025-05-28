@@ -439,7 +439,6 @@ const AdBuilder = () => {
                   ) : (
                     <>
                       <h3 className="text-sm font-medium text-gray-500">Content</h3>
-                      <p className="mt-1 text-gray-600">Custom ad content will be provided by external design tools</p>
                     </>
                   )}
                 </div>
