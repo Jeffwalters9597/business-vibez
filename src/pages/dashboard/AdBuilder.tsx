@@ -21,7 +21,10 @@ interface AdDesign {
   name: string;
   template: string;
   created_at: string;
+  background: string;
   content: {
+    headline?: string;
+    subheadline?: string;
     redirectUrl?: string;
   };
   image_url?: string;
@@ -31,6 +34,8 @@ interface AdDesign {
     title: string;
     content: {
       url?: string;
+      headline?: string;
+      subheadline?: string;
     };
   } | null;
 }
@@ -46,6 +51,9 @@ const AdBuilder = () => {
   const [adMode, setAdMode] = useState<'custom' | 'redirect'>('redirect');
   const [adForm, setAdForm] = useState({
     name: '',
+    headline: '',
+    subheadline: '',
+    background: '#FFFFFF',
     redirectUrl: ''
   });
 
@@ -87,8 +95,15 @@ const AdBuilder = () => {
       return;
     }
 
-    if (!adForm.redirectUrl) {
+    // Only validate redirect URL for redirect mode
+    if (adMode === 'redirect' && !adForm.redirectUrl) {
       toast.error('Please provide a redirect URL');
+      return;
+    }
+
+    // For custom mode, validate headline and subheadline
+    if (adMode === 'custom' && (!adForm.headline || !adForm.subheadline)) {
+      toast.error('Please provide both headline and subheadline');
       return;
     }
 
@@ -101,11 +116,17 @@ const AdBuilder = () => {
           .from('ad_spaces')
           .update({
             title: adForm.name,
-            description: `Ad space for ${adForm.name}`,
-            content: {
-                url: adForm.redirectUrl
-            },
+            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            content: adMode === 'custom' 
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  url: adForm.redirectUrl
+                },
             theme: {
+              backgroundColor: adForm.background,
               textColor: '#FFFFFF'
             }
           })
@@ -119,9 +140,15 @@ const AdBuilder = () => {
           .from('ad_designs')
           .update({
             name: adForm.name,
-            content: {
-                redirectUrl: adForm.redirectUrl
-            }
+            background: adForm.background,
+            content: adMode === 'custom'
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  redirectUrl: adForm.redirectUrl
+                }
           })
           .eq('id', selectedDesign.id)
           .select(`
@@ -149,11 +176,17 @@ const AdBuilder = () => {
           .insert([{
             user_id: user?.id,
             title: adForm.name,
-            description: `Ad space for ${adForm.name}`,
-            content: {
-                url: adForm.redirectUrl
-            },
+            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            content: adMode === 'custom' 
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  url: adForm.redirectUrl
+                },
             theme: {
+              backgroundColor: adForm.background,
               textColor: '#FFFFFF'
             }
           }])
@@ -168,9 +201,15 @@ const AdBuilder = () => {
           .insert([{
             user_id: user?.id,
             name: adForm.name,
-            content: {
-                redirectUrl: adForm.redirectUrl
-            },
+            background: adForm.background,
+            content: adMode === 'custom'
+              ? {
+                  headline: adForm.headline,
+                  subheadline: adForm.subheadline
+                }
+              : {
+                  redirectUrl: adForm.redirectUrl
+                },
             ad_space_id: adSpace.id
           }])
           .select(`
@@ -194,8 +233,12 @@ const AdBuilder = () => {
       // Reset form
       setAdForm({
         name: '',
+        headline: '',
+        subheadline: '',
+        background: '#FFFFFF',
         redirectUrl: ''
       });
+      setAdMode('redirect');
       setSelectedDesign(null);
     } catch (error: any) {
       console.error('Save error:', error);
@@ -228,9 +271,18 @@ const AdBuilder = () => {
   const handleEditAd = (design: AdDesign) => {
     setSelectedDesign(design);
     
+    // Determine if it's a redirect-only ad or a custom ad
+    const isRedirectMode = !design.content.headline && 
+      (design.content.redirectUrl || design.ad_spaces?.content?.url);
+    
+    setAdMode(isRedirectMode ? 'redirect' : 'custom');
+    
     // Populate the form with the design data
     setAdForm({
       name: design.name,
+      headline: design.content.headline || '',
+      subheadline: design.content.subheadline || '',
+      background: design.background || '#FFFFFF',
       redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || ''
     });
     
@@ -270,6 +322,7 @@ const AdBuilder = () => {
               <CardContent>
                 <div 
                   className="aspect-video rounded-md p-4 mb-4 relative overflow-hidden"
+                  style={{ backgroundColor: design.background }}
                 >
                   {design.image_url && (
                     <img 
@@ -279,11 +332,22 @@ const AdBuilder = () => {
                     />
                   )}
                   <div className="relative z-10 flex items-center justify-center h-full">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-700 bg-white bg-opacity-90 p-2 rounded">
-                        {design.content.redirectUrl || design.ad_spaces?.content?.url || 'No redirect URL'}
-                      </p>
-                    </div>
+                    {design.content.headline ? (
+                      <div className="text-center">
+                        <h3 className="text-lg font-bold mb-2 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                          {design.content.headline}
+                        </h3>
+                        <p className="text-sm text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                          {design.content.subheadline}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <p className="text-sm text-gray-700 bg-white bg-opacity-90 p-2 rounded">
+                          {design.content.redirectUrl || design.ad_spaces?.content?.url || 'No redirect URL'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
@@ -349,6 +413,7 @@ const AdBuilder = () => {
 
     const qrUrl = generateQrUrl(selectedDesign.ad_spaces.id);
     const redirectUrl = selectedDesign.content.redirectUrl || selectedDesign.ad_spaces.content.url;
+    const isRedirectMode = !!redirectUrl && !selectedDesign.content.headline;
 
     return (
       <div className="space-y-6">
@@ -374,7 +439,8 @@ const AdBuilder = () => {
             <CardContent>
               <div 
                 ref={previewRef}
-                className="aspect-video rounded-lg p-8 relative overflow-hidden border border-gray-200"
+                className="aspect-video rounded-lg p-8 relative overflow-hidden"
+                style={{ backgroundColor: selectedDesign.background }}
               >
                 {selectedDesign.image_url && (
                   <img 
@@ -384,11 +450,22 @@ const AdBuilder = () => {
                   />
                 )}
                 <div className="relative z-10 flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
-                      {redirectUrl || 'No redirect URL'}
-                    </p>
-                  </div>
+                  {isRedirectMode ? (
+                    <div className="text-center">
+                      <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
+                        {redirectUrl || 'No redirect URL'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        {selectedDesign.content.headline}
+                      </h2>
+                      <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        {selectedDesign.content.subheadline}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -429,8 +506,36 @@ const AdBuilder = () => {
                   <p>{new Date(selectedDesign.created_at).toLocaleString()}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Redirect URL</h3>
-                  <p className="mt-1 break-all">{redirectUrl || 'None'}</p>
+                  <h3 className="text-sm font-medium text-gray-500">Background Color</h3>
+                  <div className="flex items-center mt-1">
+                    <div 
+                      className="w-6 h-6 rounded border"
+                      style={{ backgroundColor: selectedDesign.background }}
+                    />
+                    <span className="ml-2">{selectedDesign.background}</span>
+                  </div>
+                </div>
+                <div>
+                  {isRedirectMode ? (
+                    <>
+                      <h3 className="text-sm font-medium text-gray-500">Redirect URL</h3>
+                      <p className="mt-1 break-all">{redirectUrl || 'None'}</p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-sm font-medium text-gray-500">Content</h3>
+                      <div className="mt-2 space-y-2">
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm font-medium">Headline</p>
+                          <p className="mt-1">{selectedDesign.content.headline}</p>
+                        </div>
+                        <div className="bg-gray-50 p-3 rounded">
+                          <p className="text-sm font-medium">Subheadline</p>
+                          <p className="mt-1">{selectedDesign.content.subheadline}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -462,13 +567,61 @@ const AdBuilder = () => {
               placeholder="Enter ad name"
             />
 
-            <Input
-              label="Redirect URL"
-              value={adForm.redirectUrl}
-              onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
-              placeholder="Enter the URL where users will be redirected"
-              leftIcon={<Link size={16} />}
-            />
+            <div className="pt-2">
+              <label className="block text-sm font-medium mb-2">Ad Type</label>
+              <div className="flex space-x-4 mb-4">
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'custom' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('custom')}
+                >
+                  <h3 className="font-medium text-sm">Custom Ad</h3>
+                </div>
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'redirect' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('redirect')}
+                >
+                  <h3 className="font-medium text-sm">Redirect Only</h3>
+                </div>
+              </div>
+            </div>
+
+            {adMode === 'custom' ? (
+              <>
+                <Input
+                  label="Headline"
+                  value={adForm.headline}
+                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
+                  placeholder="Enter headline text"
+                />
+
+                <Input
+                  label="Subheadline"
+                  value={adForm.subheadline}
+                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
+                  placeholder="Enter subheadline text"
+                />
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Background Color
+                  </label>
+                  <input
+                    type="color"
+                    value={adForm.background}
+                    onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
+                    className="w-full h-10 rounded-md cursor-pointer"
+                  />
+                </div>
+              </>
+            ) : (
+              <Input
+                label="Redirect URL"
+                value={adForm.redirectUrl}
+                onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
+                placeholder="Enter the URL where users will be redirected"
+                leftIcon={<Link size={16} />}
+              />
+            )}
           </CardContent>
           <CardFooter>
             <Button 
@@ -489,12 +642,24 @@ const AdBuilder = () => {
           <CardContent>
             <div 
               ref={previewRef}
-              className="aspect-video rounded-lg p-8 relative border border-gray-200"
+              className="aspect-video rounded-lg p-8 relative"
+              style={{ backgroundColor: adMode === 'custom' ? adForm.background : '#FFFFFF' }}
             >
               <div className="text-center">
-                <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
-                  {adForm.redirectUrl || 'Enter a redirect URL'}
-                </p>
+                {adMode === 'custom' ? (
+                  <>
+                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.headline || 'Your Headline Here'}
+                    </h2>
+                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.subheadline || 'Your subheadline text will appear here'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
+                    {adForm.redirectUrl || 'Enter a redirect URL'}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -525,13 +690,61 @@ const AdBuilder = () => {
               placeholder="Enter ad name"
             />
 
-            <Input
-              label="Redirect URL"
-              value={adForm.redirectUrl}
-              onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
-              placeholder="Enter the URL where users will be redirected"
-              leftIcon={<Link size={16} />}
-            />
+            <div className="pt-2">
+              <label className="block text-sm font-medium mb-2">Ad Type</label>
+              <div className="flex space-x-4 mb-4">
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'custom' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('custom')}
+                >
+                  <h3 className="font-medium text-sm">Custom Ad</h3>
+                </div>
+                <div 
+                  className={`p-3 border rounded-md cursor-pointer flex-1 text-center ${adMode === 'redirect' ? 'border-primary-500 bg-primary-50' : 'border-gray-200'}`}
+                  onClick={() => setAdMode('redirect')}
+                >
+                  <h3 className="font-medium text-sm">Redirect Only</h3>
+                </div>
+              </div>
+            </div>
+
+            {adMode === 'custom' ? (
+              <>
+                <Input
+                  label="Headline"
+                  value={adForm.headline}
+                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
+                  placeholder="Enter headline text"
+                />
+
+                <Input
+                  label="Subheadline"
+                  value={adForm.subheadline}
+                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
+                  placeholder="Enter subheadline text"
+                />
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Background Color
+                  </label>
+                  <input
+                    type="color"
+                    value={adForm.background}
+                    onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
+                    className="w-full h-10 rounded-md cursor-pointer"
+                  />
+                </div>
+              </>
+            ) : (
+              <Input
+                label="Redirect URL"
+                value={adForm.redirectUrl}
+                onChange={(e) => setAdForm({ ...adForm, redirectUrl: e.target.value })}
+                placeholder="Enter the URL where users will be redirected"
+                leftIcon={<Link size={16} />}
+              />
+            )}
           </CardContent>
           <CardFooter>
             <Button 
@@ -552,12 +765,24 @@ const AdBuilder = () => {
           <CardContent>
             <div 
               ref={previewRef}
-              className="aspect-video rounded-lg p-8 relative border border-gray-200"
+              className="aspect-video rounded-lg p-8 relative"
+              style={{ backgroundColor: adMode === 'custom' ? adForm.background : '#FFFFFF' }}
             >
               <div className="text-center">
-                <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
-                  {adForm.redirectUrl || 'Enter a redirect URL'}
-                </p>
+                {adMode === 'custom' ? (
+                  <>
+                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.headline || 'Your Headline Here'}
+                    </h2>
+                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      {adForm.subheadline || 'Your subheadline text will appear here'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
+                    {adForm.redirectUrl || 'Enter a redirect URL'}
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
