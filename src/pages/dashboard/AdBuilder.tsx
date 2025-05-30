@@ -334,7 +334,7 @@ const AdBuilder = () => {
                   <div className="relative z-10 flex items-center justify-center h-full">
                     {design.content.headline ? (
                       <div className="text-center">
-                        <h3 className="text-lg font-bold mb-2 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        <h3 className="text-lg font-bold mb-2 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                           {design.content.headline}
                         </h3>
                         <p className="text-sm text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
@@ -648,7 +648,7 @@ const AdBuilder = () => {
               <div className="text-center">
                 {adMode === 'custom' ? (
                   <>
-                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                    <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                       {adForm.headline || 'Your Headline Here'}
                     </h2>
                     <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
@@ -771,7 +771,7 @@ const AdBuilder = () => {
               <div className="text-center">
                 {adMode === 'custom' ? (
                   <>
-                    <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                    <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                       {adForm.headline || 'Your Headline Here'}
                     </h2>
                     <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
