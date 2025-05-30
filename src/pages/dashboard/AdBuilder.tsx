@@ -519,7 +519,7 @@ const AdBuilder = () => {
                   ) : (
                     <div className="text-center">
                       {showHeadline && selectedDesign.content.headline && (
-                        <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                        <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                           {selectedDesign.content.headline}
                         </h2>
                       )}
@@ -799,7 +799,7 @@ const AdBuilder = () => {
                 {adMode === 'custom' ? (
                   <>
                     {adForm.showHeadline && (
-                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                         {adForm.headline || 'Your Headline Here'}
                       </h2>
                     )}
@@ -1009,7 +1009,7 @@ const AdBuilder = () => {
                 {adMode === 'custom' ? (
                   <>
                     {adForm.showHeadline && (
-                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                      <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
                         {adForm.headline || 'Your Headline Here'}
                       </h2>
                     )}
