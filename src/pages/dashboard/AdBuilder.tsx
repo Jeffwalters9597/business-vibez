@@ -5,6 +5,7 @@ import Card, { CardHeader, CardTitle, CardContent, CardFooter } from '../../comp
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import QrCode from '../../components/ui/QrCode';
+import ImageUpload from '../../components/ui/ImageUpload';
 import { 
   Plus, 
   Trash2, 
@@ -12,7 +13,9 @@ import {
   Eye,
   Link,
   QrCode as QrIcon,
-  Edit
+  Edit,
+  Image as ImageIcon,
+  Film
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,6 +29,8 @@ interface AdDesign {
     headline?: string;
     subheadline?: string;
     redirectUrl?: string;
+    mediaType?: 'image' | 'video';
+    mediaUrl?: string;
   };
   image_url?: string;
   ad_space_id?: string;
@@ -36,6 +41,8 @@ interface AdDesign {
       url?: string;
       headline?: string;
       subheadline?: string;
+      mediaType?: 'image' | 'video';
+      mediaUrl?: string;
     };
   } | null;
 }
@@ -54,8 +61,12 @@ const AdBuilder = () => {
     headline: '',
     subheadline: '',
     background: '#FFFFFF',
-    redirectUrl: ''
+    redirectUrl: '',
+    mediaUrl: '',
+    mediaType: 'image' as 'image' | 'video'
   });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     fetchDesigns();
@@ -89,6 +100,58 @@ const AdBuilder = () => {
     return `${window.location.origin}/view?ad=${adId}`;
   };
 
+  const handleFileUpload = async (file: File) => {
+    setUploadedFile(file);
+    
+    // Check if it's an image or video
+    const fileType = file.type.startsWith('image/') ? 'image' : 'video';
+    setAdForm({
+      ...adForm,
+      mediaType: fileType
+    });
+    
+    // Create a temporary URL for preview
+    const previewUrl = URL.createObjectURL(file);
+    setAdForm({
+      ...adForm,
+      mediaUrl: previewUrl,
+      mediaType: fileType
+    });
+  };
+
+  const uploadMediaToStorage = async (file: File): Promise<string> => {
+    if (!file) return '';
+    
+    setIsUploading(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('ad_images')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+      
+      if (error) throw error;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('ad_images')
+        .getPublicUrl(data.path);
+      
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload media');
+      return '';
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSaveAd = async () => {
     if (!adForm.name) {
       toast.error('Please provide a name for your ad');
@@ -101,26 +164,35 @@ const AdBuilder = () => {
       return;
     }
 
-    // For custom mode, validate headline and subheadline
-    if (adMode === 'custom' && (!adForm.headline || !adForm.subheadline)) {
-      toast.error('Please provide both headline and subheadline');
+    // For custom mode, validate media upload
+    if (adMode === 'custom' && !uploadedFile && !adForm.mediaUrl) {
+      toast.error('Please upload an image or video');
       return;
     }
 
     setIsSaving(true);
 
     try {
+      // Upload file if there's a new one
+      let mediaUrl = adForm.mediaUrl;
+      if (uploadedFile) {
+        mediaUrl = await uploadMediaToStorage(uploadedFile);
+        if (!mediaUrl) {
+          throw new Error('Failed to upload media');
+        }
+      }
+
       if (selectedDesign && viewMode === 'edit') {
         // Update existing ad design and ad space
         const { data: adSpace, error: adSpaceError } = await supabase
           .from('ad_spaces')
           .update({
             title: adForm.name,
-            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            description: adMode === 'custom' ? 'Custom media ad' : `Ad space for ${adForm.name}`,
             content: adMode === 'custom' 
               ? {
-                  headline: adForm.headline,
-                  subheadline: adForm.subheadline
+                  mediaType: adForm.mediaType,
+                  mediaUrl: mediaUrl
                 }
               : {
                   url: adForm.redirectUrl
@@ -143,8 +215,8 @@ const AdBuilder = () => {
             background: adForm.background,
             content: adMode === 'custom'
               ? {
-                  headline: adForm.headline,
-                  subheadline: adForm.subheadline
+                  mediaType: adForm.mediaType,
+                  mediaUrl: mediaUrl
                 }
               : {
                   redirectUrl: adForm.redirectUrl
@@ -176,11 +248,11 @@ const AdBuilder = () => {
           .insert([{
             user_id: user?.id,
             title: adForm.name,
-            description: adMode === 'custom' ? adForm.subheadline : `Ad space for ${adForm.name}`,
+            description: adMode === 'custom' ? 'Custom media ad' : `Ad space for ${adForm.name}`,
             content: adMode === 'custom' 
               ? {
-                  headline: adForm.headline,
-                  subheadline: adForm.subheadline
+                  mediaType: adForm.mediaType,
+                  mediaUrl: mediaUrl
                 }
               : {
                   url: adForm.redirectUrl
@@ -204,8 +276,8 @@ const AdBuilder = () => {
             background: adForm.background,
             content: adMode === 'custom'
               ? {
-                  headline: adForm.headline,
-                  subheadline: adForm.subheadline
+                  mediaType: adForm.mediaType,
+                  mediaUrl: mediaUrl
                 }
               : {
                   redirectUrl: adForm.redirectUrl
@@ -236,10 +308,13 @@ const AdBuilder = () => {
         headline: '',
         subheadline: '',
         background: '#FFFFFF',
-        redirectUrl: ''
+        redirectUrl: '',
+        mediaUrl: '',
+        mediaType: 'image'
       });
       setAdMode('redirect');
       setSelectedDesign(null);
+      setUploadedFile(null);
     } catch (error: any) {
       console.error('Save error:', error);
       toast.error(error.message || 'Failed to save design');
@@ -272,18 +347,21 @@ const AdBuilder = () => {
     setSelectedDesign(design);
     
     // Determine if it's a redirect-only ad or a custom ad
-    const isRedirectMode = !design.content.headline && 
+    const isRedirectMode = !design.content.mediaUrl && 
       (design.content.redirectUrl || design.ad_spaces?.content?.url);
     
     setAdMode(isRedirectMode ? 'redirect' : 'custom');
     
     // Populate the form with the design data
     setAdForm({
+      ...adForm,
       name: design.name,
       headline: design.content.headline || '',
       subheadline: design.content.subheadline || '',
       background: design.background || '#FFFFFF',
-      redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || ''
+      redirectUrl: design.content.redirectUrl || design.ad_spaces?.content?.url || '',
+      mediaUrl: design.content.mediaUrl || design.ad_spaces?.content?.mediaUrl || '',
+      mediaType: design.content.mediaType || 'image'
     });
     
     setViewMode('edit');
@@ -324,22 +402,25 @@ const AdBuilder = () => {
                   className="aspect-video rounded-md p-4 mb-4 relative overflow-hidden"
                   style={{ backgroundColor: design.background }}
                 >
-                  {design.image_url && (
-                    <img 
-                      src={design.image_url} 
-                      alt="" 
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+                  {design.content.mediaUrl && (
+                    design.content.mediaType === 'video' ? (
+                      <video 
+                        src={design.content.mediaUrl} 
+                        className="absolute inset-0 w-full h-full object-cover"
+                        controls
+                      />
+                    ) : (
+                      <img 
+                        src={design.content.mediaUrl} 
+                        alt="" 
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    )
                   )}
                   <div className="relative z-10 flex items-center justify-center h-full">
-                    {design.content.headline ? (
-                      <div className="text-center">
-                        <h3 className="text-lg font-bold mb-2 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                          {design.content.headline}
-                        </h3>
-                        <p className="text-sm text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                          {design.content.subheadline}
-                        </p>
+                    {design.content.mediaUrl ? (
+                      <div className="absolute bottom-0 right-0 bg-black bg-opacity-50 p-1 rounded-tl text-white text-xs">
+                        {design.content.mediaType === 'video' ? 'Video' : 'Image'}
                       </div>
                     ) : (
                       <div className="text-center">
@@ -413,7 +494,9 @@ const AdBuilder = () => {
 
     const qrUrl = generateQrUrl(selectedDesign.ad_spaces.id);
     const redirectUrl = selectedDesign.content.redirectUrl || selectedDesign.ad_spaces.content.url;
-    const isRedirectMode = !!redirectUrl && !selectedDesign.content.headline;
+    const mediaUrl = selectedDesign.content.mediaUrl || selectedDesign.ad_spaces.content.mediaUrl;
+    const mediaType = selectedDesign.content.mediaType || 'image';
+    const isRedirectMode = !!redirectUrl && !mediaUrl;
 
     return (
       <div className="space-y-6">
@@ -442,27 +525,26 @@ const AdBuilder = () => {
                 className="aspect-video rounded-lg p-8 relative overflow-hidden"
                 style={{ backgroundColor: selectedDesign.background }}
               >
-                {selectedDesign.image_url && (
-                  <img 
-                    src={selectedDesign.image_url} 
-                    alt="" 
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
+                {mediaUrl && (
+                  mediaType === 'video' ? (
+                    <video 
+                      src={mediaUrl} 
+                      className="absolute inset-0 w-full h-full object-cover"
+                      controls
+                    />
+                  ) : (
+                    <img 
+                      src={mediaUrl} 
+                      alt="" 
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )
                 )}
                 <div className="relative z-10 flex items-center justify-center h-full">
-                  {isRedirectMode ? (
+                  {isRedirectMode && (
                     <div className="text-center">
                       <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
                         {redirectUrl || 'No redirect URL'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <h2 className="text-3xl font-bold mb-4 text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        {selectedDesign.content.headline}
-                      </h2>
-                      <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                        {selectedDesign.content.subheadline}
                       </p>
                     </div>
                   )}
@@ -506,37 +588,21 @@ const AdBuilder = () => {
                   <p>{new Date(selectedDesign.created_at).toLocaleString()}</p>
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500">Background Color</h3>
-                  <div className="flex items-center mt-1">
-                    <div 
-                      className="w-6 h-6 rounded border"
-                      style={{ backgroundColor: selectedDesign.background }}
-                    />
-                    <span className="ml-2">{selectedDesign.background}</span>
+                  <h3 className="text-sm font-medium text-gray-500">Type</h3>
+                  <p>{isRedirectMode ? 'Redirect Only' : 'Custom Media'}</p>
+                </div>
+                {mediaUrl && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Media Type</h3>
+                    <p>{mediaType === 'video' ? 'Video' : 'Image'}</p>
                   </div>
-                </div>
-                <div>
-                  {isRedirectMode ? (
-                    <>
-                      <h3 className="text-sm font-medium text-gray-500">Redirect URL</h3>
-                      <p className="mt-1 break-all">{redirectUrl || 'None'}</p>
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="text-sm font-medium text-gray-500">Content</h3>
-                      <div className="mt-2 space-y-2">
-                        <div className="bg-gray-50 p-3 rounded">
-                          <p className="text-sm font-medium">Headline</p>
-                          <p className="mt-1">{selectedDesign.content.headline}</p>
-                        </div>
-                        <div className="bg-gray-50 p-3 rounded">
-                          <p className="text-sm font-medium">Subheadline</p>
-                          <p className="mt-1">{selectedDesign.content.subheadline}</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                )}
+                {isRedirectMode && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Redirect URL</h3>
+                    <p className="mt-1 break-all">{redirectUrl || 'None'}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -587,30 +653,20 @@ const AdBuilder = () => {
 
             {adMode === 'custom' ? (
               <>
-                <Input
-                  label="Headline"
-                  value={adForm.headline}
-                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
-                  placeholder="Enter headline text"
-                />
-
-                <Input
-                  label="Subheadline"
-                  value={adForm.subheadline}
-                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
-                  placeholder="Enter subheadline text"
-                />
-
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Background Color
+                    Upload Media
                   </label>
-                  <input
-                    type="color"
-                    value={adForm.background}
-                    onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
-                    className="w-full h-10 rounded-md cursor-pointer"
+                  <ImageUpload
+                    onUpload={handleFileUpload}
+                    accept={['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm']}
+                    maxSize={10485760} // 10MB
+                    preview={adForm.mediaUrl}
+                    className="mb-2"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Images (PNG, JPG, GIF) or Videos (MP4, MOV, WEBM)
+                  </p>
                 </div>
               </>
             ) : (
@@ -628,7 +684,7 @@ const AdBuilder = () => {
               onClick={handleSaveAd} 
               className="w-full" 
               leftIcon={<Save size={16} />}
-              isLoading={isSaving}
+              isLoading={isSaving || isUploading}
             >
               Save Ad Design
             </Button>
@@ -642,19 +698,38 @@ const AdBuilder = () => {
           <CardContent>
             <div 
               ref={previewRef}
-              className="aspect-video rounded-lg p-8 relative"
+              className="aspect-video rounded-lg p-8 relative overflow-hidden"
               style={{ backgroundColor: adMode === 'custom' ? adForm.background : '#FFFFFF' }}
             >
-              <div className="text-center">
+              {adMode === 'custom' && adForm.mediaUrl ? (
+                adForm.mediaType === 'video' ? (
+                  <video 
+                    src={adForm.mediaUrl} 
+                    className="absolute inset-0 w-full h-full object-cover"
+                    controls
+                  />
+                ) : (
+                  <img 
+                    src={adForm.mediaUrl} 
+                    alt="" 
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )
+              ) : null}
+              <div className="relative z-10 flex items-center justify-center h-full">
                 {adMode === 'custom' ? (
-                  <>
-                    <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.headline || 'Your Headline Here'}
-                    </h2>
-                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.subheadline || 'Your subheadline text will appear here'}
-                    </p>
-                  </>
+                  !adForm.mediaUrl && (
+                    <div className="text-center text-gray-400">
+                      <div className="mb-2">
+                        {adForm.mediaType === 'video' ? (
+                          <Film size={40} className="mx-auto" />
+                        ) : (
+                          <ImageIcon size={40} className="mx-auto" />
+                        )}
+                      </div>
+                      <p>Upload media to preview</p>
+                    </div>
+                  )
                 ) : (
                   <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
                     {adForm.redirectUrl || 'Enter a redirect URL'}
@@ -710,30 +785,20 @@ const AdBuilder = () => {
 
             {adMode === 'custom' ? (
               <>
-                <Input
-                  label="Headline"
-                  value={adForm.headline}
-                  onChange={(e) => setAdForm({ ...adForm, headline: e.target.value })}
-                  placeholder="Enter headline text"
-                />
-
-                <Input
-                  label="Subheadline"
-                  value={adForm.subheadline}
-                  onChange={(e) => setAdForm({ ...adForm, subheadline: e.target.value })}
-                  placeholder="Enter subheadline text"
-                />
-
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Background Color
+                    Upload Media
                   </label>
-                  <input
-                    type="color"
-                    value={adForm.background}
-                    onChange={(e) => setAdForm({ ...adForm, background: e.target.value })}
-                    className="w-full h-10 rounded-md cursor-pointer"
+                  <ImageUpload
+                    onUpload={handleFileUpload}
+                    accept={['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime', 'video/webm']}
+                    maxSize={10485760} // 10MB
+                    preview={adForm.mediaUrl}
+                    className="mb-2"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Images (PNG, JPG, GIF) or Videos (MP4, MOV, WEBM)
+                  </p>
                 </div>
               </>
             ) : (
@@ -751,7 +816,7 @@ const AdBuilder = () => {
               onClick={handleSaveAd} 
               className="w-full" 
               leftIcon={<Save size={16} />}
-              isLoading={isSaving}
+              isLoading={isSaving || isUploading}
             >
               Update Ad Design
             </Button>
@@ -765,19 +830,38 @@ const AdBuilder = () => {
           <CardContent>
             <div 
               ref={previewRef}
-              className="aspect-video rounded-lg p-8 relative"
+              className="aspect-video rounded-lg p-8 relative overflow-hidden"
               style={{ backgroundColor: adMode === 'custom' ? adForm.background : '#FFFFFF' }}
             >
-              <div className="text-center">
+              {adMode === 'custom' && adForm.mediaUrl ? (
+                adForm.mediaType === 'video' ? (
+                  <video 
+                    src={adForm.mediaUrl} 
+                    className="absolute inset-0 w-full h-full object-cover"
+                    controls
+                  />
+                ) : (
+                  <img 
+                    src={adForm.mediaUrl} 
+                    alt="" 
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                )
+              ) : null}
+              <div className="relative z-10 flex items-center justify-center h-full">
                 {adMode === 'custom' ? (
-                  <>
-                    <h2 className="text-3xl font-bold mb-4 text-white\" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.headline || 'Your Headline Here'}
-                    </h2>
-                    <p className="text-xl text-white" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-                      {adForm.subheadline || 'Your subheadline text will appear here'}
-                    </p>
-                  </>
+                  !adForm.mediaUrl && (
+                    <div className="text-center text-gray-400">
+                      <div className="mb-2">
+                        {adForm.mediaType === 'video' ? (
+                          <Film size={40} className="mx-auto" />
+                        ) : (
+                          <ImageIcon size={40} className="mx-auto" />
+                        )}
+                      </div>
+                      <p>Upload media to preview</p>
+                    </div>
+                  )
                 ) : (
                   <p className="text-gray-700 bg-white bg-opacity-90 p-3 rounded shadow-sm">
                     {adForm.redirectUrl || 'Enter a redirect URL'}
